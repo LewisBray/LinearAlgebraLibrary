@@ -7,6 +7,9 @@
 #include <algorithm>
 #include <optional>
 #include <numeric>
+#include <utility>
+#include <random>
+#include <chrono>
 #include <string>
 #include <array>
 
@@ -50,10 +53,68 @@ constexpr bool operator==(const point& lhs, const point& rhs) noexcept
     return lhs.x == rhs.x && lhs.y == rhs.y;
 }
 
+int randomNumber(const int low, const int high)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(low, high);
+
+    return dis(gen);
+}
+
+struct throws_when_default_constructed
+{
+    int value = 0;
+
+    throws_when_default_constructed()
+        : value{ randomNumber(-50, 50) }
+    {
+        if (value < 0)
+            throw std::exception{};
+    }
+};
+
+struct throws_when_copy_assigned
+{
+    int value = 0;
+
+    throws_when_copy_assigned& operator=(const throws_when_copy_assigned& other)
+    {
+        value = other.value;
+        if (randomNumber(-50, 50) < 0)
+            throw std::exception{};
+    }
+};
+
+struct throws_when_move_assigned
+{
+    int value = 0;
+
+    throws_when_move_assigned& operator=(throws_when_move_assigned&& other)
+    {
+        value = other.value;
+        if (randomNumber(-50, 50))
+            throw std::exception{};
+    }
+};
+
+// Some type aliases for testing exception specifications
+using trivial_array = int[2][3];
+using not_nothrow_default_constructible_array = throws_when_default_constructed[5][7];
+using not_nothrow_copy_assignable_array = throws_when_copy_assigned[1][9];
+using not_nothrow_move_assignable_array = throws_when_move_assigned[18][2];
+using string_matrix = lal::matrix<std::string, 4, 15>;
+using not_nothrow_default_constructible_matrix = lal::matrix<throws_when_default_constructed, 5, 55>;
+using not_nothrow_copy_assignable_matrix = lal::matrix<throws_when_copy_assigned, 110, 12>;
+
 TEST_CASE("Construction", "[construction]")
 {
     SECTION("Default constructor")
     {
+        REQUIRE(noexcept(lal::matrix<long long, 5, 12>{}));
+        // TO-DO: This should not be noexcept...
+        //REQUIRE(!noexcept(lal::matrix<throws_when_default_constructed, 15, 15>{}));
+        
         // Default construction should call default constructor for template type
         const lal::matrix<std::string, 3, 8> m;
         REQUIRE(m.rows() == 3u);
@@ -66,6 +127,8 @@ TEST_CASE("Construction", "[construction]")
 
     SECTION("initializer_list move constructor and corresponding template deduction guide")
     {
+        REQUIRE(!noexcept(lal::matrix{ { 0.0, 1.0 }, { 1.0, 2.0 }, { 2.0, 3.0 } }));
+        
         const lal::matrix m{ { 0.0, 1.0 }, { 1.0, 2.0 }, { 2.0, 3.0 } };
         REQUIRE(m.rows() == 3u);
         REQUIRE(m.columns() == 2u);
@@ -78,7 +141,11 @@ TEST_CASE("Construction", "[construction]")
 
     SECTION("matrix copy constructor")
     {
+        // TO-DO: This should not be noexcept...
+        //REQUIRE(!noexcept(lal::matrix{ lal::matrix<throws_when_copy_assigned, 4, 3>{} }));
+
         const lal::matrix m1{ { 1.0f, 2.0f, 3.0f }, { 4.0f, 5.0f, 6.0f } };
+        REQUIRE(noexcept(lal::matrix{ m1 }));
         const lal::matrix m2{ m1 };
         REQUIRE(m1.rows() == m2.rows());
         REQUIRE(m1.columns() == m2.columns());
@@ -90,6 +157,8 @@ TEST_CASE("Construction", "[construction]")
 
     SECTION("matrix move constructor")
     {
+        // TO-DO: noexcept checks
+
         lal::matrix m1{ { point{ 1, 1 } }, { point{ 2, 2 } }, { point{ 3, 3 } } };
         const lal::matrix m2{ std::move(m1) };
         REQUIRE(m1.rows() == m2.rows());
@@ -108,6 +177,10 @@ TEST_CASE("Construction", "[construction]")
 
     SECTION("2-dimensional array copy constructor and corresponding template deduction guide")
     {
+        REQUIRE(noexcept(lal::matrix{ trivial_array{} }));
+        REQUIRE(!noexcept(lal::matrix{ not_nothrow_default_constructible_array{} }));
+        REQUIRE(!noexcept(lal::matrix{ not_nothrow_copy_assignable_array{} }));
+
         const int data[2][3] = { { 1, 2, 3 }, { 4, 5, 6 } };
         const lal::matrix m{ data };
         REQUIRE(m.rows() == 2u);
@@ -121,6 +194,10 @@ TEST_CASE("Construction", "[construction]")
 
     SECTION("2-dimensional array move constructor and corresponding template deduction guide")
     {
+        REQUIRE(noexcept(lal::matrix{ std::move(trivial_array{}) }));
+        REQUIRE(!noexcept(lal::matrix{ not_nothrow_default_constructible_array{} }));
+        REQUIRE(!noexcept(lal::matrix{ not_nothrow_move_assignable_array{} }));
+
         point points[2][2] = { { { 0, 0 }, { 0, 1 } }, { { 1, 0 }, { 1, 1 } } };
         const lal::matrix m{ std::move(points) };
         REQUIRE(m.rows() == 2u);
@@ -142,6 +219,8 @@ TEST_CASE("Assignment", "[assignment]")
 {
     SECTION("matrix copy assignment")
     {
+        // TO-DO: noexcept checks
+
         const lal::matrix m1{ { "Hello, ", "world", "!" } };
         const lal::matrix m2 = m1;
         REQUIRE(m1.rows() == m2.rows());
@@ -175,6 +254,8 @@ TEST_CASE("Access", "[access]")
 {
     SECTION("Range checking access")
     {
+        REQUIRE(!noexcept(std::declval<lal::matrix<int, 4, 5>>().at(4)));
+
         const lal::matrix<char, 5, 18> m;
         const auto& row = m.at(3);
         for (auto i = std::begin(row); i != std::begin(row) + m.columns(); ++i)
@@ -198,7 +279,9 @@ TEST_CASE("Access", "[access]")
     {
         lal::matrix<wchar_t, 14, 7> m;
         m.front() = L't';
+        REQUIRE(noexcept(m.front()));
         REQUIRE(m.front() == L't');
+        REQUIRE(noexcept(m[0][0]));
         REQUIRE(m[0][0] == L't');
         for (auto element = m.begin() + 1; element != m.end(); ++element)
             REQUIRE(*element == wchar_t{});
@@ -212,6 +295,7 @@ TEST_CASE("Access", "[access]")
             return n;
         }();
 
+        REQUIRE(noexcept(m.back()));
         REQUIRE(m.back() == static_cast<int>(m.size()) - 1);
         REQUIRE(m[m.rows() - 1][m.columns() - 1] == static_cast<int>(m.size()) - 1);
     }
@@ -219,7 +303,8 @@ TEST_CASE("Access", "[access]")
     SECTION("Raw data array access")
     {
         lal::matrix<std::optional<double>, 24, 9> m;
-        auto* p = m.data();
+        REQUIRE(noexcept(m.data()));
+        auto* const p = m.data();
         for (std::size_t i = 0u; i < m.size(); ++i)
             p[i] = -18.0;
         for (const auto& element : m)
@@ -229,6 +314,9 @@ TEST_CASE("Access", "[access]")
 
 TEST_CASE("Iterators", "[iterators]")
 {
+    // Standard iterators are checked extensively throughout
+    // all tests and so we only check the reverse ones
+
     SECTION("Reverse iterators")
     {
         const lal::matrix m = { { -6.0, -5.0, -4.0 }, { -3.0, -2.0, -1.0 } };
@@ -241,7 +329,10 @@ TEST_CASE("Algorithms", "[algorithms]")
 {
     SECTION("Fill")
     {
+        REQUIRE(!noexcept(std::declval<lal::matrix<throws_when_copy_assigned, 4, 5>>().fill(throws_when_copy_assigned{})));
+        
         lal::matrix<std::array<double, 3>, 15, 82> m;
+        REQUIRE(noexcept(m.fill(std::array{ 1.0, 2.0, 3.0 })));
         m.fill(std::array{ 1.0, 2.0, 3.0 });
         for (const auto& element : m)
             REQUIRE(element == std::array{ 1.0, 2.0, 3.0 });
@@ -249,6 +340,9 @@ TEST_CASE("Algorithms", "[algorithms]")
 
     SECTION("Swap")
     {
+        using throws_when_move_assigned_matrix = lal::matrix<throws_when_move_assigned, 1, 18>;
+        REQUIRE(!noexcept(std::declval<throws_when_move_assigned_matrix>().swap(std::declval<throws_when_move_assigned_matrix&>())));
+        
         lal::matrix<long double, 14, 52> m1;
         std::iota(m1.begin(), m1.end(), 0.0l);
 
@@ -256,6 +350,7 @@ TEST_CASE("Algorithms", "[algorithms]")
         std::transform(m1.begin(), m1.end(), m2.begin(),
             [](const long double value) { return 2.0l * value; });
         
+        REQUIRE(noexcept(m1.swap(m2)));
         m1.swap(m2);
         for (auto el1 = m1.begin(), el2 = m2.begin(); el1 != m1.end(); ++el1, ++el2)
             REQUIRE(*el1 == 2.0l * *el2);
@@ -266,12 +361,15 @@ TEST_CASE("Addition", "[addition]")
 {
     SECTION("Addition assignment operator")
     {
+        REQUIRE(!noexcept(std::declval<string_matrix&>() += string_matrix{}));
+        
         lal::matrix<int, 5, 15> m1;
         m1.fill(1);
 
         decltype(m1) m2;
         m2.fill(2);
 
+        REQUIRE(noexcept(m1 += m2));
         m1 += m2;
         for (const int element : m1)
             REQUIRE(element == 3);
@@ -279,7 +377,9 @@ TEST_CASE("Addition", "[addition]")
 
     SECTION("Addition operator")
     {
-        constexpr auto f = [](const std::size_t x, const std::size_t y) {
+        REQUIRE(!noexcept(string_matrix{} + string_matrix{}));
+
+        constexpr auto f = [](const std::size_t x, const std::size_t y) noexcept {
             return 3 * x + 4 * y + x * y + 23;
         };
 
@@ -292,6 +392,7 @@ TEST_CASE("Addition", "[addition]")
         std::transform(m1.begin(), m1.end(), m2.begin(),
             [](const std::size_t x) { return x * 12; });
 
+        REQUIRE(noexcept(m1 + m2));
         const auto m3 = m1 + m2;
         for (std::size_t row = 0u; row < m1.rows(); ++row)
             for (std::size_t column = 0u; column < m1.columns(); ++column)
@@ -303,6 +404,8 @@ TEST_CASE("Subtraction", "[subtraction]")
 {
     SECTION("Subtraction assignment operator")
     {
+        // TO-DO: Test with -= operation that can throw
+
         lal::matrix<double, 13, 13> m1;
         m1.fill(-18.0);
 
@@ -311,24 +414,28 @@ TEST_CASE("Subtraction", "[subtraction]")
             for (std::size_t column = 0u; column < m2.columns(); ++column)
                 m2[row][column] = m1[row][column] + static_cast<double>(row + column);
 
-        m1 += m2;
+        REQUIRE(noexcept(m1 -= m2));
+        m1 -= m2;
         for (std::size_t row = 0u; row < m1.rows(); ++row)
             for (std::size_t column = 0u; column < m1.columns(); ++column)
-                REQUIRE(m1[row][column] == -36.0 + static_cast<double>(row + column));
+                REQUIRE(m1[row][column] == -static_cast<double>(row + column));
     }
 
     SECTION("Subtraction operator")
     {
+        // TO-DO: Test with - operation that can throw
+
         lal::matrix m1{ { 4, 8, 9 }, { 1, 9, 4 }, { 2, 2, 2 }, { 9, 0, -1 } };
 
         decltype(m1) m2;
         m2.fill(-10);
 
-        m1 -= m2;
+        REQUIRE(noexcept(m1 - m2));
+        const auto result = m1 - m2;
 
-        const decltype(m1) m3{ { 14, 18, 19 }, { 11, 19, 14 }, { 12, 12, 12 }, { 19, 10, 9 } };
-        for (auto [el1, el3] = std::make_pair(m1.begin(), m3.begin()); el1 != m1.end(); ++el1, ++el3)
-            REQUIRE(*el1 == *el3);
+        const decltype(m1) answer{ { 14, 18, 19 }, { 11, 19, 14 }, { 12, 12, 12 }, { 19, 10, 9 } };
+        for (auto [r, a] = std::make_pair(result.begin(), answer.begin()); r != result.end(); ++r, ++a)
+            REQUIRE(*r == *a);
     }
 }
 
@@ -336,9 +443,12 @@ TEST_CASE("Multiplication", "[multiplication]")
 {
     SECTION("Multiplication operator")
     {
+        // TO-DO: Test with * operator that can throw
+
         const lal::matrix m1{ { 2, 1, 4 }, { 0, 1, 1 } };
         const lal::matrix m2{ { 6, 3, -1, 0}, { 1, 1, 0, 4 }, { -2, 5, 0, 2 } };
         
+        REQUIRE(noexcept(m1 * m2));
         const auto result = m1 * m2;
         const lal::matrix answer{ { 5, 27, -2, 12 }, { -1, 6, 0, 6 } };
         REQUIRE(result.rows() == answer.rows());
@@ -349,9 +459,12 @@ TEST_CASE("Multiplication", "[multiplication]")
 
     SECTION("Multiplication assignment operator")
     {
+        // TO-DO: Test with *= operator that can throw
+
         lal::matrix m1{ { 5, -11 }, { 4, 0 }, { -2, 1 } };
         const lal::matrix m2{ { -3, -5 }, { -1, 4 } };
 
+        REQUIRE(noexcept(m1 *= m2));
         m1 *= m2;
         const lal::matrix answer{ { -4, -69 }, { -12, -20 }, { 5, 14 } };
         REQUIRE(m1.rows() == answer.rows());
@@ -363,8 +476,12 @@ TEST_CASE("Multiplication", "[multiplication]")
 
     SECTION("Scalar multiplication assignment operator")
     {
+        // TO-DO: Test with *= operator that can throw
+
         lal::matrix<float, 13, 2> m;
         m.fill(19.0f);
+
+        REQUIRE(noexcept(m *= 2.0f));
         m *= 2.0f;
         for (const float element : m)
             REQUIRE(element == 38.0f);
@@ -372,13 +489,17 @@ TEST_CASE("Multiplication", "[multiplication]")
 
     SECTION("Scalar multiplication operator")
     {
+        // TO-DO: Test with a * operator that throws
+
         lal::matrix<double, 18, 19> m1;
         m1.fill(-1.0);
 
+        REQUIRE(noexcept(-22.0 * m1));
         const auto m2 = -22.0 * m1;
         for (const double element : m2)
             REQUIRE(element == 22.0);
 
+        REQUIRE(noexcept(m1 * 34.2));
         const auto m3 = m1 * 34.2;
         for (const double element : m3)
             REQUIRE(element == -34.2);
@@ -386,12 +507,15 @@ TEST_CASE("Multiplication", "[multiplication]")
 
     SECTION("Hadamard multiplication assignment operator")
     {
+        // TO-DO: Test with a * operator that throws
+
         lal::matrix<long long, 3, 13> m1;
         m1.fill(1ll);
 
         decltype(m1) m2;
         m2.fill(123456789ll);
 
+        REQUIRE(noexcept(m1 %= m2));
         m1 %= m2;
         for (const long long element : m1)
             REQUIRE(element == 123456789ll);
@@ -399,9 +523,12 @@ TEST_CASE("Multiplication", "[multiplication]")
 
     SECTION("Hadamard multiplication operator")
     {
+        // TO-DO: Test with a * operator that throws
+
         const lal::matrix m1{ { 2, 2, 2 }, { 5, 5, 5 }, { -1, -1, -1 } };
         const decltype(m1) m2{ { 3, 3, 3 }, { 2, 2, 2 }, { 4, 4, 4 } };
 
+        REQUIRE(noexcept(m1 % m2));
         const auto m3 = m1 % m2;
         for (std::size_t column = 0u; column < m3.columns(); ++column)
         {
@@ -416,8 +543,11 @@ TEST_CASE("Division", "[division]")
 {
     SECTION("Scalar division assignment operator")
     {
+        // TO-DO: Test with a /= operator that throws
+
         lal::matrix m{ { 1.0 }, { 1.0 }, { 1.0 }, { 1.0 } };
 
+        REQUIRE(noexcept(m /= 5.0));
         m /= 5.0;
         for (const double element : m)
             REQUIRE(element == 1.0 / 5.0);
@@ -425,8 +555,11 @@ TEST_CASE("Division", "[division]")
 
     SECTION("Scalar division operator")
     {
+        // TO-DO: Test with a / operator that throws
+
         const lal::matrix m1{ { 4u, 4u }, { 5u, 5u }, { 6u, 6u }, { 7u, 7u } };
 
+        REQUIRE(noexcept(m1 / m1.rows()));
         const auto m2 = m1 / m1.rows();
         for (const unsigned element : m2)
             REQUIRE(element == 1u);
@@ -435,10 +568,13 @@ TEST_CASE("Division", "[division]")
 
 TEST_CASE("Equality", "[equality]")
 {
+    // TO-DO: Test with a == operator that throws
+
     SECTION("Equality operator")
     {
         const lal::matrix m1 = { { 3, 2, 1 }, { 6, 5, 4 }, { 9, 8, 7 }, { 12 , 11, 10 } };
         const auto m2{ m1 };
+        REQUIRE(noexcept(m1 == m2));
         REQUIRE(m1 == m2);
     }
 
@@ -447,12 +583,17 @@ TEST_CASE("Equality", "[equality]")
         const lal::matrix m1 = { { 7, 7, 7, 7, 7, 7, 7 }, { 2, 2, 2, 2, 2, 2, 2 } };
         lal::matrix m2{ m1 };
         m2[1][4] = 3;
+        REQUIRE(noexcept(m1 != m2));
         REQUIRE(m1 != m2);
     }
 }
 
 TEST_CASE("Diagonalisation", "[diagonalisation]")
 {
+    REQUIRE(!noexcept(lal::diagonalise(throws_when_default_constructed{})));
+    REQUIRE(!noexcept(lal::diagonalise(throws_when_copy_assigned{})));
+
+    REQUIRE(noexcept(lal::diagonalise(0u, 1u, 4u, 9u, 16u, 25u)));
     const auto m = lal::diagonalise(0u, 1u, 4u, 9u, 16u, 25u);
     REQUIRE(m.rows() == 6u);
     REQUIRE(m.columns() == 6u);
@@ -466,8 +607,12 @@ TEST_CASE("Diagonalisation", "[diagonalisation]")
 
 TEST_CASE("Transposition", "[transposition]")
 {
+    REQUIRE(!noexcept(lal::transpose(not_nothrow_default_constructible_matrix{})));
+    REQUIRE(!noexcept(lal::transpose(not_nothrow_copy_assignable_matrix{})));
+
     const lal::matrix m1 = { { 1, 2 }, { 3, 4 }, { 5, 6 }, { 7, 8 } };
-    const auto m2 = transpose(m1);
+    REQUIRE(noexcept(lal::transpose(m1)));
+    const auto m2 = lal::transpose(m1);
     REQUIRE(m2.rows() == m1.columns());
     REQUIRE(m2.columns() == m1.rows());
     for (std::size_t row = 0u; row < m2.rows(); ++row)
@@ -478,16 +623,24 @@ TEST_CASE("Transposition", "[transposition]")
 TEST_CASE("Magnitude", "[magnitude]")
 {
     const lal::matrix m1{ { 0 }, { 1 }, { 2 }, { 3 }, { 4 } };
+    REQUIRE(!noexcept(lal::magnitude(m1)));
     REQUIRE(lal::magnitude(m1) == 5);   // magnitude is of same type as matrix template type
 
     const lal::matrix m2{ { 0.0, 1.0 }, { 2.0, 3.0 }, { 4.0, 5.0 } };
+    REQUIRE(!noexcept(lal::magnitude(m2)));
     REQUIRE(lal::magnitude(m2) == std::sqrt(55.0));
 }
 
-TEST_CASE("Mapping", "[maping]")
+TEST_CASE("Mapping", "[mapping]")
 {
+    constexpr auto l = [](const int) -> int { throw std::exception{}; };
+    REQUIRE(!noexcept(lal::map(lal::matrix<int, 5, 14>{}, l)));
+
     const lal::matrix<std::string_view, 2, 2> m1 = { { "Test", "writing" }, { "takes", "time" } };
-    const auto m2 = lal::map(m1, [](const std::string_view sv) { return sv.length(); });
+    const auto f = [](const std::string_view sv) noexcept { return sv.length(); };
+    
+    REQUIRE(noexcept(lal::map(m1, f)));
+    const auto m2 = lal::map(m1, f);
     REQUIRE(m2.rows() == m1.rows());
     REQUIRE(m2.columns() == m1.columns());
     REQUIRE(m2 == lal::matrix{ { 4u, 7u }, { 5u, 4u } });
