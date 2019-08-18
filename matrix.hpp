@@ -33,12 +33,38 @@ namespace lal
         using const_row_reference = const value_type(&)[Columns];
 
         // Construction and assignment
-        matrix() = default;
+        constexpr matrix() noexcept(std::is_nothrow_default_constructible_v<T>) {}
         ~matrix() = default;
-        matrix(const matrix&) = default;
-        matrix& operator=(const matrix&) = default;
-        matrix(matrix&&) = default;
-        matrix& operator=(matrix&&) = default;
+        
+        constexpr matrix(const matrix& other) noexcept(std::is_nothrow_copy_assignable_v<T>)
+        {
+            auto o = other.begin();
+            for (auto t = begin(); t != end(); ++t, ++o)
+                *t = *o;
+        }
+
+        constexpr matrix& operator=(const matrix& other) noexcept(std::is_nothrow_copy_assignable_v<T>)
+        {
+            auto o = other.begin();
+            for (auto t = begin(); t != end(); ++t, ++o)
+                *t = *o;
+
+            return *this;
+        }
+
+        constexpr matrix(matrix&& other) noexcept(std::is_nothrow_move_assignable_v<T>)
+        {
+            for (auto t = begin(), o = other.begin(); t != end(); ++t, ++o)
+                *t = std::move(*o);
+        }
+
+        constexpr matrix& operator=(matrix&& other) noexcept(std::is_nothrow_move_assignable_v<T>)
+        {
+            for (auto t = begin(), o = other.begin(); t != end(); ++t, ++o)
+                *t = std::move(*o);
+
+            return *this;
+        }
 
         constexpr matrix(const T (&data)[Rows][Columns]) noexcept(std::is_nothrow_default_constructible_v<T> && std::is_nothrow_assignable_v<T&, T>)
         {
@@ -59,9 +85,10 @@ namespace lal
             if (row_list.size() != Rows)
                 throw std::length_error("Too many elements used to initialise matrix class");
 
-            int row_num = 0;
-            for (const auto& row : row_list)
-                std::move(std::begin(row), std::end(row), data_[row_num++]);
+            auto r = row_list.begin();
+            for (std::size_t row = 0u; row < Rows; ++row, ++r)
+                for (std::size_t column = 0u; column < Columns; ++column)
+                    data_[row][column] = (*r)[column];
         }
 
         // Access
@@ -119,7 +146,7 @@ namespace lal
         constexpr size_type columns() const noexcept { return Columns; }
 
         // Algorithms
-        void fill(const T& value) noexcept(std::is_nothrow_assignable_v<T, T>)
+        void fill(const T& value) noexcept(std::is_nothrow_assignable_v<T&, T>)
         {
             for (auto& element : *this)
                 element = value;
@@ -172,7 +199,7 @@ namespace lal
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns>
-    constexpr matrix<T, Rows, Columns> operator+(const matrix<T, Rows, Columns>& lhs, const matrix<T, Rows, Columns>& rhs) noexcept(std::is_nothrow_constructible_v<T> && noexcept(std::declval<T&>() += T{}))
+    constexpr matrix<T, Rows, Columns> operator+(const matrix<T, Rows, Columns>& lhs, const matrix<T, Rows, Columns>& rhs) noexcept(std::is_nothrow_constructible_v<matrix<T, Rows, Columns>> && noexcept(std::declval<matrix<T, Rows, Columns>&>() += matrix<T, Rows, Columns>{}))
     {
         matrix<T, Rows, Columns> ret{ lhs };
         ret += rhs;
@@ -192,7 +219,7 @@ namespace lal
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns>
-    constexpr matrix<T, Rows, Columns> operator-(const matrix<T, Rows, Columns>& lhs, const matrix<T, Rows, Columns>& rhs) noexcept(std::is_nothrow_constructible_v<T> && noexcept(std::declval<T&>() -= T{}))
+    constexpr matrix<T, Rows, Columns> operator-(const matrix<T, Rows, Columns>& lhs, const matrix<T, Rows, Columns>& rhs) noexcept(std::is_nothrow_constructible_v<matrix<T, Rows, Columns>> && noexcept(std::declval<matrix<T, Rows, Columns>&>() -= matrix<T, Rows, Columns>{}))
     {
         matrix<T, Rows, Columns> ret{ lhs };
         ret -= rhs;
@@ -202,7 +229,7 @@ namespace lal
 
     // Multiplication
     template <typename T, std::size_t I, std::size_t J, std::size_t K>
-    constexpr matrix<T, I, K> operator*(const matrix<T, I, J>& lhs, const matrix<T, J, K>& rhs) noexcept(std::is_nothrow_default_constructible_v<T> && noexcept(T{} * T{}))
+    constexpr matrix<T, I, K> operator*(const matrix<T, I, J>& lhs, const matrix<T, J, K>& rhs) noexcept(std::is_nothrow_default_constructible_v<matrix<T, I, K>> && noexcept(std::declval<T&>() += T{} * T{}))
     {
         matrix<T, I, K> ret{};
         for (std::size_t i = 0u; i < I; ++i)
@@ -214,7 +241,7 @@ namespace lal
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns>
-    constexpr matrix<T, Rows, Columns>& operator*=(matrix<T, Rows, Columns>& lhs, const square_matrix<T, Columns>& rhs) noexcept(noexcept(T{} * T{}))
+    constexpr matrix<T, Rows, Columns>& operator*=(matrix<T, Rows, Columns>& lhs, const square_matrix<T, Columns>& rhs) noexcept(noexcept(matrix<T, Rows, Columns>{} * square_matrix<T, Columns>{}))
     {
         lhs = lhs * rhs;
         return lhs;
@@ -230,7 +257,7 @@ namespace lal
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns>
-    constexpr matrix<T, Rows, Columns> operator*(const matrix<T, Rows, Columns>& m, const T scalar) noexcept(std::is_nothrow_constructible_v<T> && noexcept(std::declval<T&>() *= T{}))
+    constexpr matrix<T, Rows, Columns> operator*(const matrix<T, Rows, Columns>& m, const T scalar) noexcept(std::is_nothrow_constructible_v<matrix<T, Rows, Columns>> && noexcept(std::declval<matrix<T, Rows, Columns>&>() *= T{}))
     {
         matrix<T, Rows, Columns> ret{ m };
         ret *= scalar;
@@ -239,7 +266,7 @@ namespace lal
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns>
-    constexpr matrix<T, Rows, Columns> operator*(const T scalar, const matrix<T, Rows, Columns>& m) noexcept(std::is_nothrow_constructible_v<T> && noexcept(std::declval<T&>() *= T{}))
+    constexpr matrix<T, Rows, Columns> operator*(const T scalar, const matrix<T, Rows, Columns>& m) noexcept(noexcept(matrix<T, Rows, Columns>{} * T{}))
     {
         return m * scalar;
     }
@@ -256,7 +283,7 @@ namespace lal
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns>
-    constexpr matrix<T, Rows, Columns> operator%(const matrix<T, Rows, Columns>& lhs, const matrix<T, Rows, Columns>& rhs) noexcept(std::is_nothrow_constructible_v<T> && noexcept(std::declval<T&>() *= T{}))
+    constexpr matrix<T, Rows, Columns> operator%(const matrix<T, Rows, Columns>& lhs, const matrix<T, Rows, Columns>& rhs) noexcept(std::is_nothrow_constructible_v<matrix<T, Rows, Columns>> && noexcept(std::declval<matrix<T, Rows, Columns>&>() %= matrix<T, Rows, Columns>{}))
     {
         matrix<T, Rows, Columns> ret{ lhs };
         ret %= rhs;
@@ -275,7 +302,7 @@ namespace lal
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns>
-    constexpr matrix<T, Rows, Columns> operator/(const matrix<T, Rows, Columns>& m, const T scalar) noexcept(std::is_nothrow_constructible_v<T> && noexcept(std::declval<T&>() /= T{}))
+    constexpr matrix<T, Rows, Columns> operator/(const matrix<T, Rows, Columns>& m, const T scalar) noexcept(std::is_nothrow_constructible_v<matrix<T, Rows, Columns>> && noexcept(std::declval<matrix<T, Rows, Columns>&>() /= T{}))
     {
         matrix<T, Rows, Columns> ret{ m };
         ret /= scalar;
@@ -295,14 +322,14 @@ namespace lal
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns>
-    constexpr bool operator!=(const matrix<T, Rows, Columns>& lhs, const matrix<T, Rows, Columns>& rhs) noexcept(noexcept(T{} == T{}))
+    constexpr bool operator!=(const matrix<T, Rows, Columns>& lhs, const matrix<T, Rows, Columns>& rhs) noexcept(noexcept(lhs == rhs))
     {
         return !(lhs == rhs);
     }
 
     // Common matrix operations
     template <typename T, typename... Ts, typename = std::enable_if_t<std::conjunction_v<std::is_same<T, Ts>...>>>
-    constexpr square_matrix<T, 1 + sizeof...(Ts)> diagonalise(T t, Ts... ts) noexcept(std::is_nothrow_default_constructible_v<T> && std::is_nothrow_assignable_v<T&, T>)
+    constexpr square_matrix<T, 1 + sizeof...(Ts)> diagonalise(T t, Ts... ts) noexcept(std::is_nothrow_default_constructible_v<square_matrix<T, 1 + sizeof...(Ts)>> && std::is_nothrow_assignable_v<T&, T>)
     {
         square_matrix<T, 1 + sizeof...(Ts)> ret{};
         ret[0][0] = t;
@@ -313,7 +340,7 @@ namespace lal
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns>
-    constexpr matrix<T, Columns, Rows> transpose(const matrix<T, Rows, Columns>& m) noexcept(std::is_nothrow_default_constructible_v<T> && std::is_nothrow_assignable_v<T&, T>)
+    constexpr matrix<T, Columns, Rows> transpose(const matrix<T, Rows, Columns>& m) noexcept(std::is_nothrow_default_constructible_v<matrix<T, Columns, Rows>> && std::is_nothrow_assignable_v<T&, T>)
     {
         matrix<T, Columns, Rows> ret{};
         for (std::size_t row = 0u; row < Rows; ++row)
@@ -339,7 +366,7 @@ namespace lal
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns, typename Function>
-    constexpr auto map(const matrix<T, Rows, Columns>& m, Function f) noexcept(std::is_nothrow_default_constructible_v<decltype(f(T{}))> && noexcept(f(T{})) && std::is_nothrow_assignable_v<decltype(f(T{}))&, decltype(f(T{}))>) -> matrix<decltype(f(T{})), Rows, Columns>
+    constexpr auto map(const matrix<T, Rows, Columns>& m, Function f) noexcept(std::is_nothrow_default_constructible_v<matrix<decltype(f(m.front())), Rows, Columns>> && noexcept(f(T{})) && std::is_nothrow_assignable_v<decltype(f(T{}))&, decltype(f(T{}))>) -> matrix<decltype(f(T{})), Rows, Columns>
     {
         auto element = m.begin();
         matrix<decltype(f(m.front())), Rows, Columns> ret{};
