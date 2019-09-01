@@ -397,12 +397,10 @@ namespace lal
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns>
-    constexpr matrix<T, Rows, Columns> operator+(const matrix<T, Rows, Columns>& lhs, const matrix<T, Rows, Columns>& rhs) noexcept(std::is_nothrow_constructible_v<matrix<T, Rows, Columns>> && noexcept(std::declval<matrix<T, Rows, Columns>&>() += matrix<T, Rows, Columns>{}))
+    constexpr matrix<T, Rows, Columns> operator+(matrix<T, Rows, Columns> lhs, const matrix<T, Rows, Columns>& rhs) noexcept(noexcept(std::declval<matrix<T, Rows, Columns>&>() += matrix<T, Rows, Columns>{}))
     {
-        matrix<T, Rows, Columns> ret{ lhs };
-        ret += rhs;
-
-        return ret;
+        lhs += rhs;
+        return lhs;
     }
 
     // Subtraction
@@ -417,12 +415,10 @@ namespace lal
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns>
-    constexpr matrix<T, Rows, Columns> operator-(const matrix<T, Rows, Columns>& lhs, const matrix<T, Rows, Columns>& rhs) noexcept(std::is_nothrow_constructible_v<matrix<T, Rows, Columns>> && noexcept(std::declval<matrix<T, Rows, Columns>&>() -= matrix<T, Rows, Columns>{}))
+    constexpr matrix<T, Rows, Columns> operator-(matrix<T, Rows, Columns> lhs, const matrix<T, Rows, Columns>& rhs) noexcept(noexcept(std::declval<matrix<T, Rows, Columns>&>() -= matrix<T, Rows, Columns>{}))
     {
-        matrix<T, Rows, Columns> ret{ lhs };
-        ret -= rhs;
-
-        return ret;
+        lhs -= rhs;
+        return lhs;
     }
 
     // Multiplication
@@ -455,12 +451,10 @@ namespace lal
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns>
-    constexpr matrix<T, Rows, Columns> operator*(const matrix<T, Rows, Columns>& m, const T scalar) noexcept(std::is_nothrow_constructible_v<matrix<T, Rows, Columns>> && noexcept(std::declval<matrix<T, Rows, Columns>&>() *= T{}))
+    constexpr matrix<T, Rows, Columns> operator*(matrix<T, Rows, Columns> m, const T scalar) noexcept(noexcept(std::declval<matrix<T, Rows, Columns>&>() *= T{}))
     {
-        matrix<T, Rows, Columns> ret{ m };
-        ret *= scalar;
-
-        return ret;
+        m *= scalar;
+        return m;
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns>
@@ -481,12 +475,10 @@ namespace lal
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns>
-    constexpr matrix<T, Rows, Columns> operator%(const matrix<T, Rows, Columns>& lhs, const matrix<T, Rows, Columns>& rhs) noexcept(std::is_nothrow_constructible_v<matrix<T, Rows, Columns>> && noexcept(std::declval<matrix<T, Rows, Columns>&>() %= matrix<T, Rows, Columns>{}))
+    constexpr matrix<T, Rows, Columns> operator%(matrix<T, Rows, Columns> lhs, const matrix<T, Rows, Columns>& rhs) noexcept(noexcept(std::declval<matrix<T, Rows, Columns>&>() %= matrix<T, Rows, Columns>{}))
     {
-        matrix<T, Rows, Columns> ret{ lhs };
-        ret %= rhs;
-
-        return ret;
+        lhs %= rhs;
+        return lhs;
     }
 
     // Scalar division
@@ -500,12 +492,10 @@ namespace lal
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns>
-    constexpr matrix<T, Rows, Columns> operator/(const matrix<T, Rows, Columns>& m, const T scalar) noexcept(std::is_nothrow_constructible_v<matrix<T, Rows, Columns>> && noexcept(std::declval<matrix<T, Rows, Columns>&>() /= T{}))
+    constexpr matrix<T, Rows, Columns> operator/(matrix<T, Rows, Columns> m, const T scalar) noexcept(noexcept(std::declval<matrix<T, Rows, Columns>&>() /= T{}))
     {
-        matrix<T, Rows, Columns> ret{ m };
-        ret /= scalar;
-        
-        return ret;
+        m /= scalar;
+        return m;
     }
 
     // Equality
