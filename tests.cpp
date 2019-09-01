@@ -708,11 +708,11 @@ TEST_CASE("Equality", "[equality]")
 
 TEST_CASE("Diagonalisation", "[diagonalisation]")
 {
-    REQUIRE(!noexcept(lal::diagonalise(throws_when_default_constructed{})));
-    REQUIRE(!noexcept(lal::diagonalise(throws_when_copy_assigned{})));
+    REQUIRE(!noexcept(lal::make_diagonal(throws_when_default_constructed{})));
+    REQUIRE(!noexcept(lal::make_diagonal(throws_when_copy_assigned{})));
 
-    REQUIRE(noexcept(lal::diagonalise(0u, 1u, 4u, 9u, 16u, 25u)));
-    const auto m = lal::diagonalise(0u, 1u, 4u, 9u, 16u, 25u);
+    REQUIRE(noexcept(lal::make_diagonal(0u, 1u, 4u, 9u, 16u, 25u)));
+    const auto m = lal::make_diagonal(0u, 1u, 4u, 9u, 16u, 25u);
     REQUIRE(m.rows() == 6u);
     REQUIRE(m.columns() == 6u);
     for (std::size_t row = 0u; row < m.rows(); ++row)

@@ -517,7 +517,7 @@ namespace lal
 
     // Common matrix operations
     template <typename T, typename... Ts, typename = std::enable_if_t<std::conjunction_v<std::is_same<T, Ts>...>>>
-    constexpr square_matrix<T, 1 + sizeof...(Ts)> diagonalise(T t, Ts... ts) noexcept(std::is_nothrow_default_constructible_v<square_matrix<T, 1 + sizeof...(Ts)>> && std::is_nothrow_assignable_v<T&, T>)
+    constexpr square_matrix<T, 1 + sizeof...(Ts)> make_diagonal(T t, Ts... ts) noexcept(std::is_nothrow_default_constructible_v<square_matrix<T, 1 + sizeof...(Ts)>> && std::is_nothrow_assignable_v<T&, T>)
     {
         square_matrix<T, 1 + sizeof...(Ts)> ret{};
         ret[0][0] = t;
