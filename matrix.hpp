@@ -26,6 +26,8 @@ namespace lal
         using const_pointer = const value_type*;
         using iterator = value_type*;
         using const_iterator = const value_type*;
+        using row_reference = value_type(&)[Columns];
+        using const_row_reference = const value_type(&)[Columns];
 
         class reverse_iterator
         {
@@ -124,7 +126,7 @@ namespace lal
             }
 
         private:
-            iterator_type it_;
+            iterator_type it_{};
         };
 
         class const_reverse_iterator
@@ -224,11 +226,8 @@ namespace lal
             }
 
         private:
-            iterator_type it_;
+            iterator_type it_{};
         };
-
-        using row_reference = value_type(&)[Columns];
-        using const_row_reference = const value_type(&)[Columns];
 
         // Construction and assignment
         constexpr matrix() noexcept(std::is_nothrow_default_constructible_v<T>) {}
