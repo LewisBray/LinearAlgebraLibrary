@@ -15,6 +15,107 @@ namespace lal
     template <typename T, std::size_t Rows, std::size_t Columns>
     class matrix
     {
+        template <typename IteratorType, typename ValueType, typename Pointer, typename Reference>
+        class reverse_iterator_base
+        {
+        public:
+            using iterator_type = IteratorType;
+            using iterator_category = std::bidirectional_iterator_tag;
+            using value_type = ValueType;
+            using difference_type = std::ptrdiff_t;
+            using pointer = Pointer;
+            using reference = Reference;
+
+            constexpr reverse_iterator_base() = default;
+
+            constexpr explicit reverse_iterator_base(const iterator_type it) noexcept : it_{ it - 1 } {}
+
+            template <typename U>
+            constexpr explicit reverse_iterator_base(const typename matrix<U, Rows, Columns>::reverse_iterator_base& rit) noexcept
+                : it_{ reinterpret_cast<iterator_type>(rit) }
+            {}
+
+            template <typename U>
+            constexpr reverse_iterator_base& operator=(const typename matrix<U, Rows, Columns>::reverse_iterator_base& rit) noexcept
+            {
+                it_ = reinterpret_cast<iterator_type>(rit);
+                return it_;
+            }
+
+            constexpr iterator_type base() const noexcept { return it_ + 1; }
+
+            // Dereference
+            constexpr reference operator*() const noexcept { return *it_; }
+            constexpr pointer operator->() const noexcept { return it_; }
+
+            // Access
+            constexpr reference operator[](const difference_type n) noexcept { return *(it_ - n); }
+            constexpr const reference operator[](const difference_type n) const noexcept { return *(it_ - n); }
+
+            // Iterator arithmetic
+            constexpr reverse_iterator_base& operator++() noexcept
+            {
+                --it_;
+                return *this;
+            }
+
+            constexpr reverse_iterator_base& operator--() noexcept
+            {
+                ++it_;
+                return *this;
+            }
+
+            constexpr reverse_iterator_base operator++(int) noexcept
+            {
+                const reverse_iterator_base ret{ *this };
+                --it_;
+                return ret;
+            }
+
+            constexpr reverse_iterator_base operator--(int) noexcept
+            {
+                const reverse_iterator_base ret{ *this };
+                ++it_;
+                return ret;
+            }
+
+            constexpr reverse_iterator_base operator+(const difference_type n) const noexcept
+            {
+                return reverse_iterator_base{ it_ - n };
+            }
+
+            constexpr reverse_iterator_base operator-(const difference_type n) const noexcept
+            {
+                return reverse_iterator_base{ it_ + n };
+            }
+
+            constexpr reverse_iterator_base& operator+=(const difference_type n) noexcept
+            {
+                it_ -= n;
+                return *this;
+            }
+
+            constexpr reverse_iterator_base& operator-=(const difference_type n) noexcept
+            {
+                it_ += n;
+                return *this;
+            }
+
+            // Comparison
+            constexpr bool operator==(const reverse_iterator_base& other) noexcept
+            {
+                return it_ == other.it_;
+            }
+
+            constexpr bool operator!=(const reverse_iterator_base& other) noexcept
+            {
+                return !(*this == other);
+            }
+
+        private:
+            iterator_type it_{};
+        };
+
     public:
         // Type definitions
         using value_type = T;
@@ -26,208 +127,10 @@ namespace lal
         using const_pointer = const value_type*;
         using iterator = value_type*;
         using const_iterator = const value_type*;
+        using reverse_iterator = reverse_iterator_base<iterator, value_type, pointer, reference>;
+        using const_reverse_iterator = reverse_iterator_base<const_iterator, const value_type, const_pointer, const_reference>;
         using row_reference = value_type(&)[Columns];
         using const_row_reference = const value_type(&)[Columns];
-
-        class reverse_iterator
-        {
-        public:
-            using iterator_type = iterator;
-            using iterator_category = std::bidirectional_iterator_tag;
-            using value_type = T;
-            using difference_type = std::ptrdiff_t;
-            using pointer = value_type*;
-            using reference = value_type&;
-
-            constexpr reverse_iterator() = default;
-
-            constexpr explicit reverse_iterator(const iterator_type it) noexcept : it_{ it - 1 } {}
-
-            template <typename U>
-            constexpr explicit reverse_iterator(const typename matrix<U, Rows,Columns>::reverse_iterator& rit) noexcept
-                : it_{ reinterpret_cast<iterator_type>(rit) }
-            {}
-            
-            template <typename U>
-            constexpr reverse_iterator& operator=(const typename matrix<U, Rows, Columns>::reverse_iterator& rit) noexcept
-            {
-                it_ = reinterpret_cast<iterator_type>(rit);
-                return it_;
-            }
-
-            constexpr iterator_type base() const noexcept { return it_ + 1; }
-
-            // Dereference
-            constexpr reference operator*() const noexcept { return *it_; }
-            constexpr pointer operator->() const noexcept { return it_; }
-
-            // Access
-            constexpr reference operator[](const difference_type n) noexcept { return *(it_ - n); }
-            constexpr const reference operator[](const difference_type n) const noexcept { return *(it_ - n); }
-
-            // Iterator arithmetic
-            constexpr reverse_iterator& operator++() noexcept
-            {
-                --it_;
-                return *this;
-            }
-
-            constexpr reverse_iterator& operator--() noexcept
-            {
-                ++it_;
-                return *this;
-            }
-
-            constexpr reverse_iterator operator++(int) noexcept
-            {
-                const const_reverse_iterator ret{ *this };
-                --it_;
-                return ret;
-            }
-
-            constexpr reverse_iterator operator--(int) noexcept
-            {
-                const const_reverse_iterator ret{ *this };
-                ++it_;
-                return ret;
-            }
-
-            constexpr reverse_iterator operator+(const difference_type n) const noexcept
-            {
-                return reverse_iterator{ it_ - n };
-            }
-
-            constexpr reverse_iterator operator-(const difference_type n) const noexcept
-            {
-                return reverse_iterator{ it_ + n };
-            }
-
-            constexpr reverse_iterator& operator+=(const difference_type n) noexcept
-            {
-                it_ -= n;
-                return *this;
-            }
-
-            constexpr reverse_iterator& operator-=(const difference_type n) noexcept
-            {
-                it_ += n;
-                return *this;
-            }
-
-            // Comparison
-            constexpr bool operator==(const reverse_iterator& other) noexcept
-            {
-                return it_ == other.it_;
-            }
-
-            constexpr bool operator!=(const reverse_iterator& other) noexcept
-            {
-                return !(*this == other);
-            }
-
-        private:
-            iterator_type it_{};
-        };
-
-        class const_reverse_iterator
-        {
-        public:
-            using iterator_type = const_iterator;
-            using iterator_category = std::bidirectional_iterator_tag;
-            using value_type = T;
-            using difference_type = std::ptrdiff_t;
-            using pointer = const value_type*;
-            using reference = const value_type&;
-
-            constexpr const_reverse_iterator() = default;
-
-            constexpr explicit const_reverse_iterator(const iterator_type it) noexcept : it_{ it - 1 } {}
-
-            template <typename U>
-            constexpr explicit const_reverse_iterator(const typename matrix<U, Rows, Columns>::const_reverse_iterator& rit) noexcept
-                : it_{ reinterpret_cast<iterator_type>(rit) }
-            {}
-
-            template <typename U>
-            constexpr const_reverse_iterator& operator=(const typename matrix<U, Rows, Columns>::const_reverse_iterator& rit) noexcept
-            {
-                it_ = reinterpret_cast<iterator_type>(rit);
-                return it_;
-            }
-
-            constexpr iterator_type base() const noexcept { return it_ + 1; }
-
-            // Dereference
-            constexpr reference operator*() const noexcept { return *it_; }
-            constexpr pointer operator->() const noexcept { return it_; }
-
-            // Access
-            constexpr reference operator[](const difference_type n) noexcept { return *(it_ - n); }
-            constexpr const reference operator[](const difference_type n) const noexcept { return *(it_ - n); }
-
-            // Iterator arithmetic
-            constexpr const_reverse_iterator& operator++() noexcept
-            {
-                --it_;
-                return *this;
-            }
-
-            constexpr const_reverse_iterator& operator--() noexcept
-            {
-                ++it_;
-                return *this;
-            }
-
-            constexpr const_reverse_iterator operator++(int) noexcept
-            {
-                const const_reverse_iterator ret{ *this };
-                --it_;
-                return ret;
-            }
-
-            constexpr const_reverse_iterator operator--(int) noexcept
-            {
-                const const_reverse_iterator ret{ *this };
-                ++it_;
-                return ret;
-            }
-
-            constexpr const_reverse_iterator operator+(const difference_type n) const noexcept
-            {
-                return const_reverse_iterator{ it_ - n };
-            }
-
-            constexpr const_reverse_iterator operator-(const difference_type n) const noexcept
-            {
-                return const_reverse_iterator{ it_ + n };
-            }
-
-            constexpr const_reverse_iterator& operator+=(const difference_type n) noexcept
-            {
-                it_ -= n;
-                return *this;
-            }
-
-            constexpr const_reverse_iterator& operator-=(const difference_type n) noexcept
-            {
-                it_ += n;
-                return *this;
-            }
-
-            // Comparison
-            constexpr bool operator==(const const_reverse_iterator& other) noexcept
-            {
-                return it_ == other.it_;
-            }
-
-            constexpr bool operator!=(const const_reverse_iterator& other) noexcept
-            {
-                return !(*this == other);
-            }
-
-        private:
-            iterator_type it_{};
-        };
 
         // Construction and assignment
         constexpr matrix() noexcept(std::is_nothrow_default_constructible_v<T>) {}
