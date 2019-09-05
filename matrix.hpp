@@ -26,19 +26,18 @@ namespace lal
             using pointer = Pointer;
             using reference = Reference;
 
+            // Construction and assignment
             constexpr reverse_iterator_base() = default;
 
             constexpr explicit reverse_iterator_base(const iterator_type it) noexcept : it_{ it - 1 } {}
 
-            template <typename U>
-            constexpr explicit reverse_iterator_base(const typename matrix<U, Rows, Columns>::reverse_iterator_base& rit) noexcept
-                : it_{ reinterpret_cast<iterator_type>(rit) }
+            constexpr explicit reverse_iterator_base(const reverse_iterator_base& rit) noexcept
+                : it_{ rit.it_ }
             {}
 
-            template <typename U>
-            constexpr reverse_iterator_base& operator=(const typename matrix<U, Rows, Columns>::reverse_iterator_base& rit) noexcept
+            constexpr reverse_iterator_base& operator=(const reverse_iterator_base& rit) noexcept
             {
-                it_ = reinterpret_cast<iterator_type>(rit);
+                it_ = rit.it_;
                 return it_;
             }
 
@@ -81,12 +80,12 @@ namespace lal
 
             constexpr reverse_iterator_base operator+(const difference_type n) const noexcept
             {
-                return reverse_iterator_base{ it_ - n };
+                return reverse_iterator_base{ it_ - n + 1 };
             }
 
             constexpr reverse_iterator_base operator-(const difference_type n) const noexcept
             {
-                return reverse_iterator_base{ it_ + n };
+                return reverse_iterator_base{ it_ + n + 1 };
             }
 
             constexpr reverse_iterator_base& operator+=(const difference_type n) noexcept

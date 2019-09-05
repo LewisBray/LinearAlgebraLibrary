@@ -320,17 +320,31 @@ TEST_CASE("Access", "[access]")
     }
 }
 
-TEST_CASE("Iterators", "[iterators]")
+// Standard iterators are checked extensively throughout
+// all tests and so we only check the reverse ones
+TEST_CASE("Reverse Iterators", "[reverse_iterators]")
 {
-    // Standard iterators are checked extensively throughout
-    // all tests and so we only check the reverse ones
+    lal::matrix<std::string, 18, 24> m1{};
+    for (int row = 0; row < static_cast<int>(m1.rows()); ++row)
+        for (int column = 0; column < static_cast<int>(m1.columns()); ++column)
+            m1[row][column] = std::to_string(row * column);
 
-    SECTION("Reverse iterators")
-    {
-        const lal::matrix m = { { -6.0, -5.0, -4.0 }, { -3.0, -2.0, -1.0 } };
-        for (auto [element, value] = std::make_pair(m.rbegin(), -1.0); element != m.rend(); ++element, --value)
-            REQUIRE(*element == value);
-    }
+    REQUIRE(*m1.rbegin() == *(m1.begin() + m1.size() - 1));
+    REQUIRE(*(m1.rend() - 1) == *m1.begin());
+    REQUIRE(*(m1.rbegin() + m1.columns() + 1) == "352");
+    REQUIRE(m1.rbegin().base() == m1.end());
+    REQUIRE(m1.rend().base() == m1.begin());
+    REQUIRE(m1.rbegin()[15] == "136");
+    REQUIRE(m1.rbegin()->size() == 3u);
+
+    const lal::matrix m2 = { { -6.0, -5.0, -4.0 }, { -3.0, -2.0, -1.0 } };
+    for (auto [element, value] = std::make_pair(m2.rbegin(), -1.0); element != m2.rend(); ++element, --value)
+        REQUIRE(*element == value);
+
+    const auto it1{ m2.rbegin() };
+    REQUIRE(*it1 == -1.0);
+    const auto it2 = m2.rend() - 1;
+    REQUIRE(*it2 == -6.0);
 }
 
 TEST_CASE("Algorithms", "[algorithms]")
