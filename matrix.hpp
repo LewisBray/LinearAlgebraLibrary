@@ -455,10 +455,10 @@ namespace lal
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns, typename Function>
-    constexpr auto map(const matrix<T, Rows, Columns>& m, Function f) noexcept(std::is_nothrow_default_constructible_v<matrix<decltype(f(m.front())), Rows, Columns>> && noexcept(f(T{})) && std::is_nothrow_assignable_v<decltype(f(T{}))&, decltype(f(T{}))>) -> matrix<decltype(f(T{})), Rows, Columns>
+    constexpr auto map(const matrix<T, Rows, Columns>& m, Function f) noexcept(std::is_nothrow_default_constructible_v<matrix<decltype(f(T{})), Rows, Columns>> && noexcept(f(T{})) && std::is_nothrow_assignable_v<decltype(f(T{}))&, decltype(f(T{}))> ) -> matrix<decltype(f(T{})), Rows, Columns>
     {
         auto element = m.begin();
-        matrix<decltype(f(m.front())), Rows, Columns> ret{};
+        matrix<decltype(f(T{})), Rows, Columns > ret{};
         for (auto r = ret.begin(); r != ret.end(); ++r, ++element)
             *r = f(*element);
 
