@@ -735,6 +735,13 @@ TEST_CASE("Diagonalisation", "[diagonalisation]")
                 REQUIRE(m[row][column] == row * column);
             else
                 REQUIRE(m[row][column] == 0u);
+
+    using namespace std::chrono_literals;
+    const auto m2 = lal::make_diagonal(5000ms);
+    REQUIRE(m2.rows() == 1u);
+    REQUIRE(m2.columns() == 1u);
+    REQUIRE(m2.size() == 1u);
+    REQUIRE(m2[0][0] == 5s);
 }
 
 TEST_CASE("Transposition", "[transposition]")
