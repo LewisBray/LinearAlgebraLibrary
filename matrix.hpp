@@ -335,8 +335,8 @@ namespace lal
     {
         matrix<T, I, K> ret{};
         for (std::size_t i = 0u; i < I; ++i)
-            for (std::size_t k = 0u; k < K; ++k)
-                for (std::size_t j = 0u; j < J; ++j)
+            for (std::size_t j = 0u; j < J; ++j)
+                for (std::size_t k = 0u; k < K; ++k)
                     ret[i][k] += lhs[i][j] * rhs[j][k];
 
         return ret;
