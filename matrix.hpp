@@ -431,7 +431,7 @@ namespace lal
     }
 
     // Common matrix operations
-    template <typename T, typename... Ts, typename = std::enable_if_t<std::conjunction_v<std::is_same<T, Ts>...>>>
+    template <typename T, typename... Ts, std::enable_if_t<std::conjunction_v<std::is_same<T, Ts>...>, bool> = true>
     constexpr square_matrix<T, 1 + sizeof...(Ts)> make_diagonal(T t, Ts... ts)
         noexcept(std::is_nothrow_default_constructible_v<square_matrix<T, 1 + sizeof...(Ts)>> && std::is_nothrow_assignable_v<T&, T>)
     {
