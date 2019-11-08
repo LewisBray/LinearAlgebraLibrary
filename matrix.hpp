@@ -376,7 +376,7 @@ namespace lal
     }
 
     template <typename T, std::size_t Rows, std::size_t Columns, std::enable_if_t<std::is_signed_v<T>, bool> = true>
-    constexpr matrix<T, Rows, Columns> operator-(matrix<T, Rows, Columns> m) noexcept
+    constexpr matrix<T, Rows, Columns> operator-(const matrix<T, Rows, Columns>& m) noexcept
     {
         return static_cast<T>(-1) * m;
     }
