@@ -510,6 +510,9 @@ TEST_CASE("Multiplication", "[multiplication]")
     {
         int value = 0;
 
+        constexpr throws_when_multiplied() = default;
+        constexpr throws_when_multiplied(const int x) noexcept : value{ x } {}
+
         constexpr throws_when_multiplied& operator+=(const throws_when_multiplied other)
         {
             value += other.value;
@@ -596,6 +599,18 @@ TEST_CASE("Multiplication", "[multiplication]")
         const auto m3 = m1 * 34.2;
         for (const double element : m3)
             REQUIRE(element == -34.2);
+    }
+
+    SECTION("Unary minus operator")
+    {
+        const lal::matrix<short, 54, 7> m1;
+        REQUIRE(noexcept(-m1));
+        const auto m2 = -m1;
+        REQUIRE(m1.rows() == m2.rows());
+        REQUIRE(m1.columns() == m2.columns());
+        REQUIRE(m1.size() == m2.size());
+        for (auto [e1, e2] = std::make_pair(m1.begin(), m2.begin()); e1 != m1.end(); ++e1, ++e2)
+            REQUIRE(-*e1 == *e2);
     }
 
     SECTION("Hadamard multiplication assignment operator")
